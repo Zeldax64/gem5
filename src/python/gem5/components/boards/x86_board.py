@@ -30,6 +30,7 @@ from ...resources.resource import AbstractResource
 from ...utils.override import overrides
 from .abstract_system_board import AbstractSystemBoard
 from ...isas import ISA
+from typing import Optional
 
 from m5.objects import (
     Pc,
@@ -300,7 +301,11 @@ class X86Board(AbstractSystemBoard, KernelDiskWorkload):
         return "/dev/hda"
 
     @overrides(KernelDiskWorkload)
-    def _add_disk_to_board(self, disk_image: AbstractResource):
+    def _add_disk_to_board(
+        self,
+        disk_image: AbstractResource,
+        spare_image: Optional[AbstractResource] = None,
+    ):
         ide_disk = IdeDisk()
         ide_disk.driveID = "device0"
         ide_disk.image = CowDiskImage(
@@ -308,8 +313,20 @@ class X86Board(AbstractSystemBoard, KernelDiskWorkload):
         )
         ide_disk.image.child.image_file = disk_image.get_local_path()
 
-        # Attach the SimObject to the system.
-        self.pc.south_bridge.ide.disks = [ide_disk]
+        # Add spare disk with the same properties as the main disk.
+        if spare_image:
+            spare_disk = IdeDisk()
+            spare_disk.driveID = "device1"
+            spare_disk.image = CowDiskImage(
+                child=RawDiskImage(read_only=True), read_only=False
+            )
+            spare_disk.image.child.image_file = spare_image.get_local_path()
+
+        # Attach the SimObjects to the system.
+        if spare_image is None:
+            self.pc.south_bridge.ide.disks = [ide_disk]
+        else:
+            self.pc.south_bridge.ide.disks = [ide_disk, spare_disk]
 
     @overrides(KernelDiskWorkload)
     def get_default_kernel_args(self) -> List[str]:

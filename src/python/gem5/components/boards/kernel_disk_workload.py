@@ -94,14 +94,20 @@ class KernelDiskWorkload:
         raise NotImplementedError
 
     @abstractmethod
-    def _add_disk_to_board(self, disk_image: DiskImageResource) -> None:
+    def _add_disk_to_board(
+        self,
+        disk_image: DiskImageResource,
+        spare_image: Optional[DiskImageResource] = None,
+    ) -> None:
         """
         Sets the configuration needed to add the disk image to the board.
 
         **Note:** This will be executed at the end of the
         `set_kernel_disk_workload` function.
 
-        :param disk_image: The disk image to add to the system.
+        :param disk_image: The main disk image to add to the system.
+        :param spare_image: A spare disk image to be added. Can be mounted
+        after system boots to store benchmarks.
         """
         raise NotImplementedError
 
@@ -138,6 +144,7 @@ class KernelDiskWorkload:
         self,
         kernel: KernelResource,
         disk_image: DiskImageResource,
+        spare_image: Optional[DiskImageResource],
         bootloader: Optional[BootloaderResource] = None,
         readfile: Optional[str] = None,
         readfile_contents: Optional[str] = None,
@@ -151,6 +158,7 @@ class KernelDiskWorkload:
 
         :param kernel: The kernel to boot.
         :param disk_image: The disk image to mount.
+        :param spare_image: An extra disk image that can be mounted after boot.
         :param bootloader: The current implementation of the ARM board requires
         three resources to operate -- kernel, disk image, and, a bootloader.
         :param readfile: An optional parameter stating the file to be read by
@@ -204,7 +212,7 @@ class KernelDiskWorkload:
             file.write(readfile_contents)
             file.close()
 
-        self._add_disk_to_board(disk_image=disk_image)
+        self._add_disk_to_board(disk_image=disk_image, spare_image=spare_image)
 
         # Set whether to exit on work items.
         self.exit_on_work_items = exit_on_work_items
